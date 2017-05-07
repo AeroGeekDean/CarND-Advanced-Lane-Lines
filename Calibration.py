@@ -4,13 +4,13 @@ import glob
 # import matplotlib.pyplot as plt
 
 class Calibration(object):
-    """
+    '''
     This class handles the calibration of a camera.
 
     After instantiation, call set_img_location() with path/pattern to image files.
     Then call calibrate() for it to evaluate distortion calibration parameters.
     Fianlly call apply() with image to undistort.
-    """
+    '''
     def __init__(self, width=9, hgt=6):
         self.cwidth = width
         self.cheight = hgt
@@ -60,8 +60,13 @@ class Calibration(object):
         # create list of objectpoints, the same length as imgpoints
         objpoints = [self.objp for i in self.imgpoints]
 
-        [ret, self.mtx, self.dist, self.rvecs, self.tvecs] = \
-            cv2.calibrateCamera(objpoints, self.imgpoints, img_size, None, None)
+        output = cv2.calibrateCamera(objpoints, self.imgpoints, img_size, None, None)
+        ret = output[0]
+        self.mtx = output[1]
+        self.dist = output[2]
+        self.rvecs = output[3]
+        self.tvecs = output[4]
+
         return
 
     def apply(self, img):
