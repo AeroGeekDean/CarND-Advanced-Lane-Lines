@@ -41,6 +41,7 @@ def find_lane_lines(img):
     # correct for distortion
     img_undistorted = myCal.apply(img)
 
+    # process image
     img_gray = cv2.cvtColor(img_undistorted, cv2.COLOR_RGB2GRAY)
     img_sbx = abs_sobel_thresh(img_gray, orient='x',
                                sobel_kernel=3, thresh=(20,200))
