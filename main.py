@@ -6,10 +6,10 @@ from PerspectiveTransform import PerspectiveTransform
 
 
 # camera distortion handler
-# myCal = Calibration()
+myCal = Calibration()
 
 # perspective transform handler
-# myXform = PerspectiveTransform()
+myXform = PerspectiveTransform()
 
 def main():
 
@@ -144,7 +144,7 @@ def find_curvatures(binary_img, w_width=80, w_hgt=80, margin=100):
     margin : how much to slide each successive layer left/right for searching
     '''
     # verify input image is binary!
-    # if (binary_img.shape[])
+    # if (binary_img.shape[2])
 
     window_centroids = find_window_centroids(binary_img, w_width, w_hgt, margin)
 
