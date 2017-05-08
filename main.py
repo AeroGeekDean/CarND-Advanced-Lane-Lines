@@ -6,10 +6,10 @@ from PerspectiveTransform import PerspectiveTransform
 
 
 # camera distortion handler
-myCal = Calibration()
+# myCal = Calibration()
 
 # perspective transform handler
-myXform = PerspectiveTransform()
+# myXform = PerspectiveTransform()
 
 def main():
 
@@ -125,6 +125,17 @@ def dir_thresh(gray_img, sobel_kernel=3, thresh=(0, np.pi/2)):
 # Curveature finding
 #--------------------
 
+# class init_centroid(object):
+#     def __init__(self):
+#         self.value = None
+#         return
+#
+#     def set(self, ic_tuple):
+#         self.value = ic_tuple
+#         return
+#
+# ic = init_centroid()
+
 def find_curvatures(binary_img, w_width=80, w_hgt=80, margin=100):
     '''
     binary_img : binary image
@@ -132,6 +143,8 @@ def find_curvatures(binary_img, w_width=80, w_hgt=80, margin=100):
     w_hgt : window height
     margin : how much to slide each successive layer left/right for searching
     '''
+    # verify input image is binary!
+    # if (binary_img.shape[])
 
     window_centroids = find_window_centroids(binary_img, w_width, w_hgt, margin)
 
@@ -156,6 +169,9 @@ def find_curvatures(binary_img, w_width=80, w_hgt=80, margin=100):
         # Fit a second order polynomial to each
         left_fit = np.polyfit(left_y, left_x, 2)
         right_fit = np.polyfit(right_y, right_x, 2)
+
+        # update init_centroid for next frame
+        # ic.set(window_centroids[0])
     else:
         # return straight lines
         left_fit = right_fit = [0.0, 0.0, 0.0]
@@ -176,6 +192,7 @@ def find_window_centroids(image, window_width, window_height, margin):
     l_sum = np.sum(image[int(image.shape[0]*3/4):,
                          :int(image.shape[1]/2)], axis=0) # bottom 1/4 hgt, left side
     l_center = np.argmax(np.convolve(window,l_sum)) -window_width/2
+    # l_center = np.argmax(np.convolve(window,l_sum)) -window_width/2
     # Note - conv signal Ref is R side of window, thus +half_width
 
     r_sum = np.sum(image[int(image.shape[0]*3/4):,
