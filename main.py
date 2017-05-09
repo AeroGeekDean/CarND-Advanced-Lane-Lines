@@ -11,51 +11,6 @@ myCal = Calibration()
 # perspective transform handler
 myXform = PerspectiveTransform()
 
-def main():
-
-    file_path = ''
-    file_pattern = ''
-
-    # initialize
-    myCal.set_img_location(file_path, file_pattern)
-    myCal.calibrate()
-
-    src_x = [280, 440, 860, 1035]
-    src_y = [680, 563, 563, 680]
-    dst_x = [1280*0.25, 1280*0.25, 1280*0.75, 1280*0.75]
-    dst_y = [720, 600, 600, 720]
-    src_road = np.stack((src_x, src_y), axis=0).T.astype(np.float32)
-    dst_road = np.stack((dst_x, dst_y), axis=0).T.astype(np.float32)
-
-    myXform.set_src(src_road)
-    myXform.set_dst(dst_road)
-    myXform.calibrate()
-
-    # run
-    find_lane_lines(None)
-
-    exit()
-
-def find_lane_lines(img):
-
-    # correct for distortion
-    img_undistorted = myCal.apply(img)
-
-    # process image
-    img_gray = cv2.cvtColor(img_undistorted, cv2.COLOR_RGB2GRAY)
-    img_sbx = abs_sobel_thresh(img_gray, orient='x',
-                               sobel_kernel=3, thresh=(20,200))
-    img_sbin = hls_thresh(img_undistorted, ch_sel='s', thresh=(170,255))
-    img_combo = (img_sbx | img_sbin)
-
-    # apply perspetive transform (pre-calibrated)
-    img_bird = myXform.transform(img_combo)
-
-    # curvature finding
-    fit_l, fit_r = find_curvatures(img_bird, margin=50)
-
-    return fit_l, fit_r
-
 #----------------------------
 # HLS colorspace + threshold
 #----------------------------
@@ -179,7 +134,6 @@ def find_curvatures(binary_img, start_pts, w_width=80, w_hgt=80, margin=40):
 
     # DEBUG - generate image of window (green) and found points (white)
     zero_ch = np.zeros_like(binary_img)
-
     win_image = cv2.merge((zero_ch,zero_ch,win_img))*255 # blue window boxes
     pts_image = cv2.merge((r_points,l_points,zero_ch))*255 # left red, right green
     binary_image = cv2.merge((binary_img,binary_img,binary_img))*255
@@ -276,7 +230,3 @@ def window_mask(width, height, img_ref, center, level):
 def curvature_radius(fit, y):
     radius = ((1 + (2*fit[0]*y + fit[1])**2)**1.5) / np.absolute(2*fit[0])
     return radius
-
-
-if __name__ == '__main__':
-    main()
