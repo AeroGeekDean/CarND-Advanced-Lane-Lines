@@ -74,8 +74,6 @@ Combined processed outputs:
 ![alt text][image3c]
 
 
-#### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
-
 The code for my perspective transform is a Class located in the file `'PerspectiveTransform.py'`. Its usage in demonstrated in the notebook under the **Perspective Transform** section.
 
 I manually but judicially chosen the transform polygon coordinates in the straight test images. By utilizing the following dimensional information from US DOT:
@@ -184,12 +182,13 @@ In the final pipeline section **Let's build all of the above into a pipeline**, 
 ![alt text][image6]
 
 #### Line validity detection
-I also implemented line validity detection by monitoring how many pixels the algorithm has detected and using to predict each lane line. If the number of pixels drops below some threshold, the validity is flagged FALSE, and the display text turns RED.
-![alt text][image6a]
+I also implemented line validity detection by monitoring how many pixels the algorithm has detected and using to predict each lane line. If the number of pixels drops below some threshold, the validity is flagged FALSE. When this happens:
 
-Additionally,
-- the 2nd degree polynomial lane line tracking from the previous valid frame is used to dead-reckon over the rough spots
-- a "Cold Start" on the windowing search for initialized, where a more expansive search is conducted on the next frame.
+- the display text turns RED.
+- the lane line from the previous valid frame is used to dead-reckon over the current frame
+- a "Cold Start" on the windowing search is initialized, where a more expansive (but more robust) search is conducted on the next frame.
+
+![alt text][image6a]
 
 **Furthermore**, to maintain temporal continuity on the near-end of the lane line from frame-to-frame (ie: the lines near the camera will NOT jump away from its previous positioin discontinuously), **each frame's windowing search at the bottom of the screen will initialize based on the position of the previous frame.**
 
@@ -207,10 +206,14 @@ Here's link to the ["debug" version of the video](https://youtu.be/8tPBpahHpcg),
 
 ### Discussion
 
-The amount of time it took to trail-n-error the different aspects of this project took up more time than I anticipated. As such, I now only have 1.5 days left to scramble thru project 5 before my deadline on 5/10. If I don't make the deadline, I'll get kicked out of the SDC program. Yes, this is my 2nd extension (the paid one).
-:(
+The amount of time it took to trail-n-error the different aspects of this project took up more time than I anticipated.
 
-The initial computer vision portion of the project were pretty straight forward. What was more difficult was trying to get the implement the windowing search (of lane lines) algorithm, and making it not so fragile. Then after that is the temporal aspect of frame-to-frame dynamics. Luckily, we could take advantage of the continuous nature of the physical world's motion, and devise methods to make the system more robust. I've discussed above what I've implemented. Other improvement possibilities are:
+The initial computer vision portion of the project were pretty straight forward. What was more difficult was trying to a good working implementation of the windowing search (of lane lines) algorithm, and making it not so fragile to the temporal aspect of frame-to-frame dynamics. Luckily, we could take advantage of the continuous nature of the physical world's motion, and devise methods to make the system more robust. I've discussed the fault detection and handling that I've implemented (in the `'Line validity section'` above).
+
+Other improvement possibilities are:
+
 - utilizing **Hough transform** to find pixels that are more likely to be co-linear to improved line detection.
-- if I had more time, I would try to implement the polynomial such that the bottom of the screen is the origin of the Y-axis. This way, the constant coefficient term would be exactly the lateral deviation. And the higher ordered terms might be able to map to sharpness of the turn, and possibly help with upcoming impact on trajectory planning / guidance for vehicle/tire dynamic purpose.
-- possibly use some sort of **predictive-corrective dynamic filtering** (Kalman or variations there of) for tracking the lanes, to take advantage of the continuous nature of vehicle's forward motion.
+
+- if I had more time, I would try to implement the polynomial such that the bottom of the screen is the zero (0.0) of the Y-axis. This way, the constant coefficient term would be exactly the lateral deviation. And the higher ordered terms might be able to map to sharpness of the turn, and possibly help with calculating the lateral accelration associated with the upcoming road curvature, for vehicle/tire dynamic purposes.
+
+- possibly use some sort of **predictive-corrective dynamic filtering** (Kalman or variations there of) for tracking the lanes, to take advantage of the known continuous nature of vehicle's forward motion.
