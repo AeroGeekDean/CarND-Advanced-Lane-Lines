@@ -125,18 +125,7 @@ def dir_thresh(gray_img, sobel_kernel=3, thresh=(0, np.pi/2)):
 # Curveature finding
 #--------------------
 
-# class init_centroid(object):
-#     def __init__(self):
-#         self.value = None
-#         return
-#
-#     def set(self, ic_tuple):
-#         self.value = ic_tuple
-#         return
-#
-# ic = init_centroid()
-
-def find_curvatures(binary_img, w_width=80, w_hgt=80, margin=100):
+def find_curvatures(binary_img, start_pts, w_width=80, w_hgt=80, margin=40):
     '''
     binary_img : binary image
     w_width : window width
@@ -146,41 +135,59 @@ def find_curvatures(binary_img, w_width=80, w_hgt=80, margin=100):
     # verify input image is binary!
     # if (binary_img.shape[2])
 
-    window_centroids = find_window_centroids(binary_img, w_width, w_hgt, margin)
+    window_centroids = find_window_centroids(binary_img, start_pts, w_width, w_hgt, margin)
 
-    # found any centers
-    if (len(window_centroids)>0):
-        # Points used to draw the lane pixels within left and right windows
-        l_points = np.zeros_like(binary_img)
-        r_points = np.zeros_like(binary_img)
-        # Go through each level and draw the lane pixels
-        for level, centroids in enumerate(window_centroids):
-            # Window_mask is a function to draw window areas
-            l_mask = window_mask(w_width, w_hgt, binary_img, centroids[0], level)
-            r_mask = window_mask(w_width, w_hgt, binary_img, centroids[1], level)
-            # Add graphic points from window mask here to total pixels found
-            l_points[((l_mask==1) & (binary_img==1)) | (l_points==1)] = 1
-            r_points[((r_mask==1) & (binary_img==1)) | (r_points==1)] = 1
+    # Points used to draw the lane pixels within left and right windows
+    l_points = np.zeros_like(binary_img)
+    r_points = np.zeros_like(binary_img)
 
-        # Identify the x and y positions of all drawn pixels in the images
-        left_y, left_x = l_points.nonzero()
-        right_y, right_x = r_points.nonzero()
+    win_img = np.zeros_like(binary_img) # DEBUGGING
 
-        # Fit a second order polynomial to each
+    # Go through each level and draw the lane pixels
+    for level, centroids in enumerate(window_centroids):
+        # Window_mask is a function to draw window areas
+        l_mask = window_mask(w_width, w_hgt, binary_img, centroids[0], level)
+        r_mask = window_mask(w_width, w_hgt, binary_img, centroids[1], level)
+
+        win_img[((win_img==1) | (l_mask==1))] = 1 # DEBUGGING
+        win_img[((win_img==1) | (r_mask==1))] = 1 # DEBUGGING
+
+        # Add graphic points from window mask here to total pixels found
+        l_points[((l_mask==1) & (binary_img==1)) | (l_points==1)] = 1
+        r_points[((r_mask==1) & (binary_img==1)) | (r_points==1)] = 1
+
+    # Identify the x and y positions of all drawn pixels in the images
+    left_y, left_x = l_points.nonzero()
+    right_y, right_x = r_points.nonzero()
+
+    # Fit a second order polynomial to each
+    if (left_y.size==0):
+        print('Fit FAIL: left_fit')
+        left_fit = [0.0, 0.0, 0.0]
+    else:
         left_fit = np.polyfit(left_y, left_x, 2)
+
+    if (right_y.size==0):
+        print('Fit FAIL: right_fit')
+        right_fit= [0.0, 0.0, binary_img.shape[1]/2]
+    else:
         right_fit = np.polyfit(right_y, right_x, 2)
 
-        # update init_centroid for next frame
-        # ic.set(window_centroids[0])
-    else:
-        # return straight lines
-        left_fit = right_fit = [0.0, 0.0, 0.0]
-    return left_fit, right_fit
+    # DEBUG - generate image of window (green) and found points (white)
+    zero_ch = np.zeros_like(binary_img)
 
-def find_window_centroids(image, window_width, window_height, margin):
+    win_image = cv2.merge((binary_img,binary_img,binary_img+win_img))*255 # blue window boxes
+    # pts_image = cv2.merge((r_points,l_points,zero_ch))*255 # left red, right green
+    # output_img = cv2.addWeighted(pts_image, 1, win_image, 0.5, 0.0)
+
+    return left_fit, right_fit, window_centroids[0], win_image
+
+def find_window_centroids(image, start_pts, window_width, window_height, margin):
 
     window_centroids = [] # Store the (L,R) window centroid positions per level
     window = np.ones(window_width) # window template for convolution use
+
+    img_hgt, img_wid = image.shape
 
     # First find the two starting positions for the left and right lane by using
     # np.sum to get the vertical image slice and then np.convolve the vertical
@@ -188,25 +195,36 @@ def find_window_centroids(image, window_width, window_height, margin):
 
     # -- initialize the L & R centroid positions --
 
-    # Sum quarter bottom of image to get slice, could use a different ratio
-    l_sum = np.sum(image[int(image.shape[0]*3/4):,
-                         :int(image.shape[1]/2)], axis=0) # bottom 1/4 hgt, left side
-    l_center = np.argmax(np.convolve(window,l_sum)) -window_width/2
-    # l_center = np.argmax(np.convolve(window,l_sum)) -window_width/2
-    # Note - conv signal Ref is R side of window, thus +half_width
+    # Cold start. Search img bottom for starting window locations
+    if start_pts == (None, None):
 
-    r_sum = np.sum(image[int(image.shape[0]*3/4):,
-                         int(image.shape[1]/2):], axis=0) # bottom 1/4 hgt, right side
-    r_center = np.argmax(np.convolve(window,r_sum)) -window_width/2 +int(image.shape[1]/2)
+        print('find_window_centroids(): Cold starting window centroid search...')
+        # Sum quarter bottom of image to get slice, could use a different ratio
+        l_sum = np.sum(image[int(img_hgt*3/4):,
+                             :int(img_wid/2)], axis=0) # bottom 1/4 hgt, left side
+        l_center = np.argmax(np.convolve(window,l_sum)) -window_width/2
+        # l_center = np.argmax(np.convolve(window,l_sum)) -window_width/2
+        # Note - conv signal Ref is R side of window, thus +half_width
 
-    # Add the init layer centroid pos
-    window_centroids.append( (l_center,r_center) )
+        r_sum = np.sum(image[int(img_hgt*3/4):,
+                             int(img_wid/2):], axis=0) # bottom 1/4 hgt, right side
+        r_center = np.argmax(np.convolve(window,r_sum)) -window_width/2 +int(img_wid/2)
+
+    else:
+        (l_center, r_center) = start_pts
+        # limit each line start point to their own halves of the image
+        l_center = min(max(l_center,0),img_wid/2)
+        r_center = min(max(r_center,img_wid/2),img_wid)
+
+    # # Add the init layer centroid pos
+    # window_centroids.append( (l_center,r_center) )
+
 
     # Go through each layer looking for max pixel locations
-    for level in range(1,(int)(image.shape[0]/window_height)):
+    for level in range(0,int(img_hgt/window_height)):
         # convolve the window into the vertical slice of the image
-        top_idx    = int(image.shape[0]-(level+1)*window_height)
-        bottom_idx = int(image.shape[0]-level*window_height)
+        top_idx    = int(img_hgt-(level+1)*window_height)
+        bottom_idx = int(img_hgt-level*window_height)
 
         image_layer = np.sum(image[top_idx:bottom_idx,:], axis=0)
         conv_signal = np.convolve(window, image_layer)
@@ -216,12 +234,12 @@ def find_window_centroids(image, window_width, window_height, margin):
         #   at right side of window, not center of window
         offset = window_width/2
         l_min_index = int(max(l_center+offset-margin,0))
-        l_max_index = int(min(l_center+offset+margin,image.shape[1]))
+        l_max_index = int(min(l_center+offset+margin,img_wid/2))
         l_center = np.argmax(conv_signal[l_min_index:l_max_index]) +l_min_index -offset
 
         # Find the best right centroid by using past right center as a reference
-        r_min_index = int(max(r_center+offset-margin,0))
-        r_max_index = int(min(r_center+offset+margin,image.shape[1]))
+        r_min_index = int(max(r_center+offset-margin,img_wid/2))
+        r_max_index = int(min(r_center+offset+margin,img_wid))
         r_center = np.argmax(conv_signal[r_min_index:r_max_index]) +r_min_index -offset
 
         # Add what we found for that layer
