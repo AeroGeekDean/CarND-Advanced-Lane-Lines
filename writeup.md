@@ -189,9 +189,11 @@ In the final pipeline section **Let's build all of the above into a pipeline**, 
 
 Below is an example of my result pulled from the video:
 - The **cyan** box is a fixed calibration box that is:
- - 12 ft wide (min lane width per DOT)
- - 10 ft long (length of white dashed lane line)
+  - 12 ft wide (min lane width per DOT)
+  - 10 ft long (length of white dashed lane line)
 - The **green** box is the border of top-down view and visibility limit of the Computer Vision algorithm
+- The **magenta** "magic carpet" represents the drivable area between the lane lines.
+_Boeing pilots will understand the significance of the magenta color!_ :)
 
 ![alt text][image6]
 
