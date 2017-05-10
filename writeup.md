@@ -185,7 +185,14 @@ def curvature_radius(fit, y):
     return radius
 ```
 
-In the final pipeline section **Let's build all of the above into a pipeline**, a `'find_lane_lines(img)'` function is defined. This is the **actual pipeline function** for the video processing. Here is an example of my result pulled from the video:
+In the final pipeline section **Let's build all of the above into a pipeline**, a `'find_lane_lines(img)'` function is defined. This is the **actual pipeline function** for the video processing.
+
+Below is an example of my result pulled from the video:
+- The **cyan** box is a fixed calibration box that is:
+ - 12 ft wide (min lane width per DOT)
+ - 10 ft long (length of white dashed lane line)
+- The **green** box is the border of top-down view and visibility limit of the Computer Vision algorithm
+
 ![alt text][image6]
 
 #### Line Validity Detection
