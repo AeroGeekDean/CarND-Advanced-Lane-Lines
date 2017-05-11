@@ -141,21 +141,22 @@ def find_curvatures(binary_img, start_pts, w_width=80, w_hgt=80, margin=40):
 
     # DEBUG - generate image of window (green) and found points (white)
     zero_ch = np.zeros_like(binary_img)
-    win_image = cv2.merge((zero_ch,zero_ch,win_img))*255 # blue window boxes
-    pts_image = cv2.merge((l_points,r_points,zero_ch))*255 # left red, right green
+    win_image = cv2.merge((zero_ch,zero_ch,win_img))*255 # blue window boxes, except when there's left points
+    pts_image = cv2.merge((zero_ch,(l_points|r_points),zero_ch))*255 # left yellow, right white
     binary_image = cv2.merge((binary_img,binary_img,binary_img))*255
     points_img = cv2.addWeighted(binary_image, 0.5, pts_image, 1, 0.0)
     output_img = cv2.addWeighted(points_img, 1, win_image, 0.5, 0.0)
 
     return fit_valid, left_fit, right_fit, window_centroids[0], output_img, (left_y.size, right_y.size)
 
-def find_window_centroids(image, start_pts, window_width, window_height, margin):
+def find_window_centroids(image, prev_fits, window_width, window_height, margin):
 
     # Note - algorithm will search ALONG the path of prev_centroids
     #        with +/-margin wiggle
 
     window_centroids = [] # Store the (L,R) window centroid positions per level
     window = np.ones(window_width) # window template for convolution use
+    gamma = 0.3 # 1 = use new window only, 0 = use prev fits only
 
     img_hgt, img_wid = image.shape
     n_levels = int(img_hgt/window_height)
@@ -167,17 +168,23 @@ def find_window_centroids(image, start_pts, window_width, window_height, margin)
     # -- initialize the L & R centroid positions --
 
     # Cold start. Search img bottom for starting window locations
-    if start_pts == (None, None):
+    if prev_fits == (None, None):
+        gamma = 1.0 # since there's no prev fit
+        prev_fits = ([0.0, 0.0, 0.0], [0.0, 0.0, 0.0]) # make fake fits to prevent blowup
+
         print('find_window_centroids(): Cold starting window centroid search...')
         # Sum bottom 1/4 of image to get slice, could use a different ratio
-        l_sum = np.sum(image[int(img_hgt*3/4):,:int(img_wid/2)], axis=0)
-        r_sum = np.sum(image[int(img_hgt*3/4):,int(img_wid/2):], axis=0)
+        l_sum = np.sum(image[int(img_hgt*2/3):,:int(img_wid/2)], axis=0)
+        r_sum = np.sum(image[int(img_hgt*2/3):,int(img_wid/2):], axis=0)
 
         # Note - conv signal Ref is R side of window, thus +half_width
         l_center = np.argmax(np.convolve(window,l_sum)) -window_width/2
         r_center = np.argmax(np.convolve(window,r_sum)) -window_width/2 +int(img_wid/2)
     else:
-        (l_center, r_center) = start_pts
+        # re-use prev fitted line's starting point
+        l_center = np.polyval(prev_fits[0], img_hgt)
+        r_center = np.polyval(prev_fits[1], img_hgt)
+
         # limit each line start point to their own halves of the image
         l_center = min(max(l_center,0),img_wid/2)
         r_center = min(max(r_center,img_wid/2),img_wid)
@@ -187,6 +194,7 @@ def find_window_centroids(image, start_pts, window_width, window_height, margin)
         # convolve the window into the vertical slice of the image
         top_idx    = int(img_hgt-(level+1)*window_height)
         bottom_idx = int(img_hgt-level*window_height)
+        mid_idx    = np.average([top_idx, bottom_idx])
 
         image_layer = np.sum(image[top_idx:bottom_idx,:], axis=0)
         conv_signal = np.convolve(window, image_layer)
@@ -202,7 +210,10 @@ def find_window_centroids(image, start_pts, window_width, window_height, margin)
         if np.sum(conv_l)==0:
             pass # if no points found, then keep prev frame value.
         else:
-            l_center = np.argmax(conv_l) +l_min_index -offset # update l_center
+            # actual center = weighted between newly discovered and prev frame's windows
+            l_center_prev = np.polyval(prev_fits[0], mid_idx)
+            l_center_new = np.argmax(conv_l) +l_min_index -offset # update l_center
+            l_center = l_center_new*gamma + l_center_prev*(1-gamma)
 
         # Find the best right centroid by using past right center as a reference
         r_min_index = int(max(r_center+offset-margin,img_wid/2))
@@ -211,12 +222,16 @@ def find_window_centroids(image, start_pts, window_width, window_height, margin)
         if np.sum(conv_r)==0:
             pass # if no points found, then keep prev value.
         else:
-            r_center = np.argmax(conv_r) +r_min_index -offset # update r_center
+            # actual center = weighted between newly discovered and prev frame's windows
+            r_center_prev = np.polyval(prev_fits[1], mid_idx)
+            r_center_new = np.argmax(conv_r) +r_min_index -offset # update r_center
+            r_center = r_center_new*gamma + r_center_prev*(1-gamma)
 
         # Add what we found for that layer
         window_centroids.append((l_center,r_center))
     return window_centroids
 
+# This is from my 1st submission. Newer version is above.
 def find_window_centroids_saved(image, start_pts, window_width, window_height, margin):
 
     # Note - algorithm will search ALONG the path of prev_centroids

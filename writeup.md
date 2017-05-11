@@ -16,17 +16,21 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./output_images/distortion_calibration_sample.png "Undistorted"
-[image2]: ./output_images/test_images.png "Road Undistorted"
-[image3a]: ./output_images/sobel_x_sample.png "Sobel-X Examples"
-[image3b]: ./output_images/HLS-S_ch_samples.png "HLS S-ch Examples"
-[image3c]: ./output_images/processed_images.png "Processed Examples"
-[image4a]: ./output_images/perspectX_calibration1.png "Perspective Calibration 1"
-[image4b]: ./output_images/perspectX_calibration2.png "Perspective Calibration 2"
-[image4c]: ./output_images/perspectX_calibration3.png "Perspective Calibration 3"
-[image5]: ./output_images/pipeline_test_images.png "Pipeline example"
-[image6]: ./output_images/final_output.png "Output"
-[image6a]: ./output_images/final_output_fault.png "Output"
+[image1]: ./output_images/distortion_calibration_sample.jpg "Undistorted"
+[image2]: ./output_images/test_images.jpg "Road Undistorted"
+[image3a]: ./output_images/sobel_x_sample.jpg "Sobel-X Examples"
+[image3b]: ./output_images/HLS-S_ch_samples.jpg "HLS S-ch Examples"
+[image3c]: ./output_images/processed_images(HLS+SobelX).jpg "Processed Examples"
+[image3d]: ./output_images/LUV-L_ch_samples.jpg "LUV L-ch Examples"
+[image3e]: ./output_images/Lab-b_ch_samples.jpg "Lab b-ch Examples"
+[image3f]: ./output_images/processed_images(LUV+LAB).jpg "Processed Examples"
+[image4a]: ./output_images/perspectX_calibration1.jpg "Perspective Calibration 1"
+[image4b]: ./output_images/perspectX_calibration2.jpg "Perspective Calibration 2"
+[image4c]: ./output_images/perspectX_calibration3.jpg "Perspective Calibration 3"
+[image5]: ./output_images/pipeline_test_images.jpg "Pipeline example"
+[image5a]: ./output_images/pipeline_test_images_a.jpg "Pipeline example"
+[image6]: ./output_images/final_output_with_pip.jpg "Output"
+[image6a]: ./output_images/final_output_fault_with_pip.jpg "Output"
 [video1]: ./my_project_video.mp4 "Video"
 
 --
@@ -56,15 +60,18 @@ Once the test images are loaded in (via `cv2.imread()` function), I immediately 
 
 Thus avoiding potential downstream colorspace mixup by working exclusively in RGB.
 
-Below are the 6 test images with distortion correction applied:
+Below are the original 6 test images **PLUS 4 more that I've extracted from the [project_video.mp4](./project_video.mp4)**, with distortion correction applied:
 ![alt text][image2]
 
 I used a combination of color and gradient thresholds to generate binary images.
 
 I used:
+**(1st attempt)**
 - Sobel X-gradient with threshold at (20,200)
 - HLS S-channel with threshold at (170,255)
 - union ('or') of above 2 results
+
+(2nd attempt described further below)
 
 Here's an example of my outputs for this step.
 
@@ -74,8 +81,22 @@ Here's an example of my outputs for this step.
 **HLS S-channel outputs:**
 ![alt text][image3b]
 
-**Combined processed outputs:**
+**Combined Sobel-X + HLS S-ch outputs:**
 ![alt text][image3c]
+
+**(2nd attempt)**
+- LUV L-channel with threshold at (220,255) (to extract out the white lines)
+- Lab b-channel with threshold at (155,255) (to extract out the yellow lines)
+- union ('or') of above 2 results
+
+**LUV L-channel outputs:**
+![alt text][image3d]
+
+**Lab b-channel outputs:**
+![alt text][image3e]
+
+**Combined LUV L-ch + Lab b-ch outputs:**
+![alt text][image3f]
 
 #### Perspective Transform
 
@@ -173,8 +194,12 @@ They are:
 
 Coupled with code in the notebook, under the section **Find lane line curvature** where I explored and prototyped the process for individual test images.
 
-Here are the results (including calculation of lane curvature and lateral deviation):
+Here are the results (including calculation of lane curvature and lateral deviation) **of my 1st attempt**:
 ![alt text][image5]
+
+#### Here are the results of my 2nd attempt
+MUCH better performance once the shadow noise are removed!
+![alt text][image5a]
 
 #### Radius of Curvature
 The radius of curvature is a function called `'curvature_radius(fit, y)'` located in `'main.py'`.
@@ -207,15 +232,19 @@ When this happens:
 
 ![alt text][image6a]
 
-**Furthermore**, to maintain temporal continuity from frame-to-frame, **each frame's windowing search at the bottom of the screen will initialize based on the position of the previous frame.** (ie: The lines near the camera will NOT jump away from its previous positioin discontinuously)
+**Furthermore**, to maintain temporal continuity from frame-to-frame, **each frame's CONVOLUTIONAL windowing box result is compared against the previous valid polynomial fit line. Thirty (30%) weight is given to the convolution, while the previous valid fitted line is given 70% weight, in coming up with the new search zones for lane pixels.** This is done since we do not expect the lines in the video image to discontinuously jump as the vehicle is being driven forward. (ie: The lines visible at x meters away will not move as we approach it.)
+
+NOTE - this weighted approach is de-activated during COLD START search.
 
 ---
 
 ### Pipeline (video)
 
-Here's a [link to my YouTube video](https://www.youtube.com/watch?v=aEZYx9vGwJI)
+Here's a [link to my YouTube video](https://www.youtube.com/watch?v=FKndq3K37IA), with Picture-in-Picture of the bird's eye algorithm view.
 
-Here's link to the ["debug" version of the video](https://youtu.be/8tPBpahHpcg), where the algorithm's view is provided.
+Link to my [my 1st attempt video](https://www.youtube.com/watch?v=aEZYx9vGwJI)
+
+Link to ["debug" version of the 1st attempt video](https://youtu.be/8tPBpahHpcg), where the algorithm's view is provided.
 
 ---
 
