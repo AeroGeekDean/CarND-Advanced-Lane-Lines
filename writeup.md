@@ -1,7 +1,15 @@
 ## Advanced Lane Finding Project Writeup
 
 ---
+### My Results
 
+Here's a composit video of my results from this project.
+
+Click image below for YouTube video.
+
+[![text](http://img.youtube.com/vi/FKndq3K37IA/0.jpg)](https://www.youtube.com/watch?v=FKndq3K37IA)
+
+--
 
 The goals / steps of this project are the following:
 
@@ -34,7 +42,6 @@ The goals / steps of this project are the following:
 [video1]: ./my_project_video.mp4 "Video"
 
 --
-
 ### Camera Calibration
 
 The code for this step is contained in the code source file [`./Calibration.py`](./Calibration.py) and used by the Jupyter notebook located in [`./P4-Project_notebook.ipynb`](./P4-Project_notebook.ipynb).  The `Calibration.py` file encapsulates the `Calibration` Class. And its usage is demonstrated in the notebook.
